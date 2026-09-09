@@ -1,0 +1,244 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation helper for private UserProfile
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'avatarFilter', 'createdAt', 'updatedAt'])
+        && data.keys().size() >= 5
+        && data.keys().size() <= 11
+        && data.uid is string
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 50
+        && data.avatarFilter is string
+        && data.avatarFilter.size() >= 1
+        && data.avatarFilter.size() <= 50
+        && data.createdAt is string
+        && data.createdAt.size() <= 50
+        && data.updatedAt is string
+        && data.updatedAt.size() <= 50
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 65536))
+        && (!('deviceAlias' in data) || (data.deviceAlias is string && data.deviceAlias.size() <= 60))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 128))
+        && (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 30))
+        && (!('phoneNumberClean' in data) || (data.phoneNumberClean is string && data.phoneNumberClean.size() <= 30))
+        && (!('countryCode' in data) || (data.countryCode is string && data.countryCode.size() <= 10));
+    }
+
+    // Validation helper for PublicProfile
+    function isValidPublicProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'displayNameLower', 'avatarFilter', 'isPublic', 'updatedAt'])
+        && data.keys().size() >= 6
+        && data.keys().size() <= 11
+        && data.uid is string
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 50
+        && data.displayNameLower is string
+        && data.displayNameLower.size() >= 1
+        && data.displayNameLower.size() <= 50
+        && data.avatarFilter is string
+        && data.avatarFilter.size() >= 1
+        && data.avatarFilter.size() <= 50
+        && data.isPublic is bool
+        && data.updatedAt is string
+        && data.updatedAt.size() <= 50
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 65536))
+        && (!('deviceAlias' in data) || (data.deviceAlias is string && data.deviceAlias.size() <= 60))
+        && (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 30))
+        && (!('phoneNumberClean' in data) || (data.phoneNumberClean is string && data.phoneNumberClean.size() <= 30))
+        && (!('countryCode' in data) || (data.countryCode is string && data.countryCode.size() <= 10));
+    }
+
+    // Validation helper for DirectChat
+    function isValidDirectChat(data) {
+      return data.keys().hasAll(['chatId', 'participants', 'updatedAt'])
+        && data.keys().size() >= 3
+        && data.keys().size() <= 6
+        && data.chatId is string
+        && data.chatId.size() <= 128
+        && data.participants is list
+        && data.participants.size() == 2
+        && request.auth.uid in data.participants
+        && data.updatedAt is string
+        && data.updatedAt.size() <= 50
+        && (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500))
+        && (!('lastMessageAt' in data) || (data.lastMessageAt is string && data.lastMessageAt.size() <= 50))
+        && (!('participantDetails' in data) || data.participantDetails is map);
+    }
+
+    // Validation helper for DirectChatMessage
+    function isValidDirectMessage(data) {
+      return data.keys().hasAll(['id', 'chatId', 'senderUid', 'senderName', 'text', 'type', 'createdAt'])
+        && data.keys().size() >= 7
+        && data.keys().size() <= 11
+        && data.id is string
+        && data.id.size() <= 128
+        && data.chatId is string
+        && data.chatId.size() <= 128
+        && data.senderUid is string
+        && data.senderUid == request.auth.uid
+        && data.senderName is string
+        && data.senderName.size() >= 1
+        && data.senderName.size() <= 50
+        && data.text is string
+        && data.text.size() >= 1
+        && data.text.size() <= 1000
+        && data.type is string
+        && (data.type == 'text' || data.type == 'media_invite' || data.type == 'transfer_notice')
+        && data.createdAt is string
+        && data.createdAt.size() <= 50
+        && (!('senderAvatarUrl' in data) || (data.senderAvatarUrl is string && data.senderAvatarUrl.size() <= 65536))
+        && (!('senderAvatarFilter' in data) || (data.senderAvatarFilter is string && data.senderAvatarFilter.size() <= 50))
+        && (!('roomId' in data) || (data.roomId is string && data.roomId.size() <= 64))
+        && (!('mediaCount' in data) || data.mediaCount is number);
+    }
+
+    // Validation helper for RemoteTransfer
+    function isValidRemoteTransfer(data) {
+      return data.keys().hasAll(['transferId', 'senderUid', 'senderName', 'receiverUid', 'receiverName', 'roomId', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() >= 9
+        && data.keys().size() <= 13
+        && data.transferId is string
+        && data.transferId.size() <= 128
+        && data.senderUid is string
+        && data.senderUid.size() <= 128
+        && data.senderName is string
+        && data.senderName.size() >= 1
+        && data.senderName.size() <= 50
+        && data.receiverUid is string
+        && data.receiverUid.size() <= 128
+        && data.receiverName is string
+        && data.receiverName.size() >= 1
+        && data.receiverName.size() <= 50
+        && data.roomId is string
+        && data.roomId.size() >= 4
+        && data.roomId.size() <= 64
+        && data.status is string
+        && (data.status == 'pending' || data.status == 'accepted' || data.status == 'rejected' || data.status == 'transferring' || data.status == 'completed' || data.status == 'cancelled')
+        && data.createdAt is string
+        && data.createdAt.size() <= 50
+        && data.updatedAt is string
+        && data.updatedAt.size() <= 50
+        && (!('senderAvatarUrl' in data) || (data.senderAvatarUrl is string && data.senderAvatarUrl.size() <= 65536))
+        && (!('senderAvatarFilter' in data) || (data.senderAvatarFilter is string && data.senderAvatarFilter.size() <= 50))
+        && (!('fileCount' in data) || data.fileCount is number)
+        && (!('totalBytes' in data) || data.totalBytes is number);
+    }
+
+    // 2. User Private Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) 
+        && isValidId(userId) 
+        && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) 
+        && isValidId(userId) 
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == existing().createdAt
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'avatarUrl', 'avatarFilter', 'deviceAlias', 'email', 'phoneNumber', 'phoneNumberClean', 'countryCode', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // 3. Public Profiles Directory for Visual Verification & User Search
+    match /publicProfiles/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if resource.data.isPublic == true;
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidPublicProfile(incoming(), userId);
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidPublicProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'displayNameLower', 'avatarUrl', 'avatarFilter', 'deviceAlias', 'isPublic', 'phoneNumber', 'phoneNumberClean', 'countryCode', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // 4. Remote Transfer Handshake Sessions
+    match /remoteTransfers/{transferId} {
+      allow get: if isSignedIn() && isValidId(transferId) && (resource.data.senderUid == request.auth.uid || resource.data.receiverUid == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.senderUid == request.auth.uid || resource.data.receiverUid == request.auth.uid);
+      allow create: if isSignedIn() 
+        && isValidId(transferId) 
+        && incoming().senderUid == request.auth.uid 
+        && isValidRemoteTransfer(incoming());
+      allow update: if isSignedIn() 
+        && isValidId(transferId) 
+        && (resource.data.senderUid == request.auth.uid || resource.data.receiverUid == request.auth.uid)
+        && isValidRemoteTransfer(incoming())
+        && incoming().transferId == existing().transferId
+        && incoming().senderUid == existing().senderUid
+        && incoming().receiverUid == existing().receiverUid
+        && incoming().roomId == existing().roomId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'fileCount', 'totalBytes']);
+      allow delete: if isSignedIn() && isValidId(transferId) && (resource.data.senderUid == request.auth.uid || resource.data.receiverUid == request.auth.uid);
+    }
+
+    // 5. Direct Chat Sessions & Messages
+    match /directChats/{chatId} {
+      allow get: if isSignedIn() && isValidId(chatId) && (request.auth.uid in resource.data.participants);
+      allow list: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn() 
+        && isValidId(chatId) 
+        && isValidDirectChat(incoming());
+      allow update: if isSignedIn() 
+        && isValidId(chatId) 
+        && (request.auth.uid in resource.data.participants)
+        && isValidDirectChat(incoming())
+        && incoming().chatId == existing().chatId
+        && incoming().participants == existing().participants
+        && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'lastMessageAt', 'participantDetails', 'updatedAt']);
+      allow delete: if isSignedIn() && isValidId(chatId) && (request.auth.uid in resource.data.participants);
+
+      // Subcollection for real-time messages
+      match /messages/{messageId} {
+        allow get, list: if isSignedIn() 
+          && isValidId(chatId) 
+          && isValidId(messageId)
+          && (request.auth.uid in get(/databases/$(database)/documents/directChats/$(chatId)).data.participants);
+        allow create: if isSignedIn() 
+          && isValidId(chatId) 
+          && isValidId(messageId)
+          && incoming().senderUid == request.auth.uid
+          && isValidDirectMessage(incoming())
+          && (request.auth.uid in get(/databases/$(database)/documents/directChats/$(chatId)).data.participants);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

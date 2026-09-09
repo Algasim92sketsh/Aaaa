@@ -1,0 +1,325 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores private user account profile, username, avatar image, and creative filters",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique user ID from Firebase Authentication"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "The user chosen account name or handle"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 65536,
+          "description": "Avatar image data URL or avatar identifier"
+        },
+        "avatarFilter": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Selected visual photo filter ID (e.g. normal, cyberpunk, noir, vintage, crimson, matrix, dramatic, violet)"
+        },
+        "deviceAlias": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Custom device nickname for transfers"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "User email address if authenticated via email provider"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Formatted international phone number"
+        },
+        "phoneNumberClean": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Normalized phone number with digits only for search"
+        },
+        "countryCode": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Country dial code like +965, +249"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of account registration"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of latest profile update"
+        }
+      },
+      "required": ["uid", "displayName", "avatarFilter", "createdAt", "updatedAt"]
+    },
+    "PublicProfile": {
+      "title": "Public Profile",
+      "description": "Public searchable user profile card containing display name, avatar and filter for visual verification across distances",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "User ID of the profile owner"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "User display name for search queries"
+        },
+        "displayNameLower": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Lowercase user display name for normalized search"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 65536,
+          "description": "Avatar image data URL"
+        },
+        "avatarFilter": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Selected visual photo filter ID"
+        },
+        "deviceAlias": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Device name or location alias"
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Flag to allow visual discovery by other users"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Formatted phone number with country dial code"
+        },
+        "phoneNumberClean": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Clean phone digits only for direct phone lookup"
+        },
+        "countryCode": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Country dial code prefix"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of latest profile update"
+        }
+      },
+      "required": ["uid", "displayName", "displayNameLower", "avatarFilter", "isPublic", "updatedAt"]
+    },
+    "DirectChat": {
+      "title": "Direct Chat",
+      "description": "One-to-one direct real-time communication channel between sender and recipient",
+      "type": "object",
+      "properties": {
+        "chatId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique chat room identifier"
+        },
+        "participants": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of user UIDs participating in the chat"
+        },
+        "participantDetails": {
+          "type": "object",
+          "description": "Map of user details including name, avatar, and phone number"
+        },
+        "lastMessage": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Snippet of the most recent message"
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Timestamp of the last message"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of latest update"
+        }
+      },
+      "required": ["chatId", "participants", "updatedAt"]
+    },
+    "DirectChatMessage": {
+      "title": "Direct Chat Message",
+      "description": "Real-time message sent inside a direct chat conversation",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique message ID"
+        },
+        "chatId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "ID of the parent chat"
+        },
+        "senderUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "User ID of the message author"
+        },
+        "senderName": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Name of the message sender"
+        },
+        "senderAvatarUrl": {
+          "type": "string",
+          "maxLength": 65536,
+          "description": "Avatar URL of the sender"
+        },
+        "senderAvatarFilter": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Visual filter of the sender avatar"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Message text content"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "media_invite", "transfer_notice"],
+          "description": "Type of message"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Optional transfer room ID"
+        },
+        "mediaCount": {
+          "type": "number",
+          "description": "Optional count of attached media items"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["id", "chatId", "senderUid", "senderName", "text", "type", "createdAt"]
+    },
+    "RemoteTransfer": {
+      "title": "Remote Transfer",
+      "description": "Cloud signaling session initiating direct media transfer between verified sender and receiver across distances",
+      "type": "object",
+      "properties": {
+        "transferId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique ID of the remote transfer session"
+        },
+        "senderUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "User ID of the sender"
+        },
+        "senderName": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Sender display name for visual confirmation"
+        },
+        "senderAvatarUrl": {
+          "type": "string",
+          "maxLength": 65536,
+          "description": "Sender avatar photo"
+        },
+        "senderAvatarFilter": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Sender avatar filter"
+        },
+        "receiverUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "User ID of the target recipient"
+        },
+        "receiverName": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Receiver display name"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "End-to-end encrypted room code"
+        },
+        "fileCount": {
+          "type": "number",
+          "description": "Number of media items being transmitted"
+        },
+        "totalBytes": {
+          "type": "number",
+          "description": "Total transfer size in bytes"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "rejected", "transferring", "completed", "cancelled"],
+          "description": "Current lifecycle status of the remote transfer"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of latest update"
+        }
+      },
+      "required": ["transferId", "senderUid", "senderName", "receiverUid", "receiverName", "roomId", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores individual user profile and avatar filter settings in Firestore"
+    },
+    "/publicProfiles/{userId}": {
+      "schema": "PublicProfile",
+      "description": "Public searchable directory of user handles and avatars for remote transfer discovery"
+    },
+    "/remoteTransfers/{transferId}": {
+      "schema": "RemoteTransfer",
+      "description": "Real-time remote transfer sessions connecting senders and recipients worldwide via Firebase signaling"
+    },
+    "/directChats/{chatId}": {
+      "schema": "DirectChat",
+      "description": "One-to-one direct chat channel connecting sender and recipient"
+    },
+    "/directChats/{chatId}/messages/{messageId}": {
+      "schema": "DirectChatMessage",
+      "description": "Messages and media exchange notices within direct chat conversations"
+    }
+  }
+}
